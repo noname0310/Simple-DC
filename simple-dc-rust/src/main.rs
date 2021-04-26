@@ -50,7 +50,7 @@ mod simple_dc {
             DcCalculator { stack: Vec::new() }
         }
 
-        pub fn step(&mut self, token: Token) -> Result<Option<&'static str>, Option<&'static str>> {
+        pub fn step(&mut self, token: Token) -> Result<Option<String>, Option<String>> {
             match token {
                 Token::Add => {
                     let result = self.check_stack_size();
@@ -98,27 +98,27 @@ mod simple_dc {
                 },
                 Token::Print => {
                     if 0 < self.stack.len() {
-                        Ok(Some(self.stack.last().unwrap().to_string().as_str()))
+                        Ok(Some(self.stack.last().unwrap().to_string()))
                     } else {
-                        Ok(Some("EOF"))
+                        Ok(Some("EOF".to_string()))
                     }
                 },
-                Token::Quit => Ok(Some("q")),
+                Token::Quit => Ok(Some("q".to_string())),
                 Token::Value(token) => {
                     match token.parse::<i32>() {
                         Ok(result) => {
                             self.stack.push(result);
                             Ok(None)
                         },
-                        Err(..) => Err(Some("Invalid token")),
+                        Err(..) => Err(Some("Invalid token".to_string())),
                     }
                 },
             }
         }
 
-        fn check_stack_size(&self) -> Result<Option<&'static str>, Option<&'static str>> {
+        fn check_stack_size(&self) -> Result<Option<String>, Option<String>> {
             if self.stack.len() < 2 {
-                Err(Some("stack.Count < 2"))
+                Err(Some("stack.Count < 2".to_string()))
             } else {
                 Ok(None)
             }
