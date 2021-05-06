@@ -2,29 +2,25 @@ import java.util.*
 
 fun main() {
     val dcCalculator = DcCalculator()
-
     while(true) {
-        val inputSplit = readLine()?.split(' ')
-        if (inputSplit != null) {
-            for(item in inputSplit)
-            {
-                val input = Token.lexSingle(item)
-                when (val result = dcCalculator.step(input)) {
-                    is Ok -> {
-                        if (result.value != null) {
-                            println("Ok: ${result.value}")
-                            if (result.value == "q") {
-                                kotlin.system.exitProcess(0)
-                            }
+        val inputSplit = readLine()?.split(' ') ?: continue
+        for(item in inputSplit) {
+            val input = Token.lexSingle(item)
+            when (val result = dcCalculator.step(input)) {
+                is Ok -> {
+                    if (result.value != null) {
+                        println("Ok: ${result.value}")
+                        if (result.value == "q") {
+                            kotlin.system.exitProcess(0)
                         }
                     }
-                    is Err -> println(
-                        if (result.error == null)
-                            "Err"
-                        else
-                            "Err: ${result.error}"
-                    )
                 }
+                is Err -> println(
+                    if (result.error == null)
+                        "Err"
+                    else
+                        "Err: ${result.error}"
+                )
             }
         }
     }
@@ -76,9 +72,7 @@ class DcCalculator {
             else
                 Ok("EOF")
         }
-        is Token.Quit -> {
-            Ok("q")
-        }
+        is Token.Quit -> Ok("q")
         is Token.Value -> {
             val parsedResult = token.value.toIntOrNull()
             if (parsedResult != null) {
