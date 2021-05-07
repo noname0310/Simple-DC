@@ -58,14 +58,15 @@ int main()
 		while (token != NULL) {
 			Token input = Token_LexSingle(token);
 			DcResult result = dcCalculator.f->step(&dcCalculator, &input);
-			if (result.f->get_message(&result) != NULL)
+			if (result.f->get_message(&result) != NULL) {
 				printf(result.f->get_result(&result) == Result_Ok
 					? "%s\n"
 					: "Err: %s\n", result.f->get_message(&result));
+				if (result.f->get_message(&result)[0] == 'q')
+					exit(0);
+			}
 			else if (result.f->get_result(&result) == Result_Err)
 				printf("Err\n");
-			if (result.f->get_message(&result)[0] == 'q')
-				exit(0);
 
 			if (result.f->get_result(&result) == Result_Err)
 				break;
