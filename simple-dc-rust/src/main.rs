@@ -21,7 +21,7 @@ fn main() {
                 Ok(result) => {
                     match result {
                         Some(result) => {
-                            println!("Ok: {}", result);
+                            println!("{}", result);
                             if result == "q" {
                                 std::process::exit(0);
                             }

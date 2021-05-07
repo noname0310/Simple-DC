@@ -18,7 +18,7 @@ public class Main {
                     @SuppressWarnings("unchecked")
                     var okResult = (Ok<String>)result;
                     if (okResult.getValue() != null) {
-                        System.out.println("Ok: " + okResult.getValue());
+                        System.out.println(okResult.getValue());
                         if (okResult.getValue().equals("q"))
                             System.exit(0);
                     }

@@ -9,7 +9,7 @@ fun main() {
             when (val result = dcCalculator.step(input)) {
                 is Ok -> {
                     if (result.value != null) {
-                        println("Ok: ${result.value}")
+                        println(result.value)
                         if (result.value == "q") {
                             kotlin.system.exitProcess(0)
                         }
