@@ -2,9 +2,9 @@ import java.util.*
 
 fun main() {
     val dcCalculator = DcCalculator()
-    while(true) {
+    while (true) {
         val inputSplit = readLine()?.split(' ') ?: continue
-        for(item in inputSplit) {
+        for (item in inputSplit) {
             val input = Token.lexSingle(item)
             when (val result = dcCalculator.step(input)) {
                 is Ok -> {
