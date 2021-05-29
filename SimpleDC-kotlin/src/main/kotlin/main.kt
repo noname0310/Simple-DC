@@ -34,7 +34,7 @@ class DcCalculator {
     private val stack: Stack<Int> = Stack()
 
     fun step(token: Token): Result<String?, String?> = when (token) {
-        is Token.Add -> {
+        Token.Add -> {
             val result = checkStackSize()
             if (result is Err) result
             else {
@@ -42,7 +42,7 @@ class DcCalculator {
                 Ok(null)
             }
         }
-        is Token.Sub -> {
+        Token.Sub -> {
             val result = checkStackSize()
             if (result is Err) result
             else {
@@ -50,7 +50,7 @@ class DcCalculator {
                 Ok(null)
             }
         }
-        is Token.Mul -> {
+        Token.Mul -> {
             val result = checkStackSize()
             if (result is Err) result
             else {
@@ -58,7 +58,7 @@ class DcCalculator {
                 Ok(null)
             }
         }
-        is Token.Div -> {
+        Token.Div -> {
             val result = checkStackSize()
             if (result is Err) result
             else {
@@ -66,13 +66,13 @@ class DcCalculator {
                 Ok(null)
             }
         }
-        is Token.Print -> {
+        Token.Print -> {
             if (0 < stack.count())
                 Ok(stack.peek().toString())
             else
                 Ok("EOF")
         }
-        is Token.Quit -> Ok("q")
+        Token.Quit -> Ok("q")
         is Token.Value -> {
             val parsedResult = token.value.toIntOrNull()
             if (parsedResult != null) {
