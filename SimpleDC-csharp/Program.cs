@@ -38,11 +38,6 @@ for (;;)
 
 namespace SimpleDC
 {
-    // ReSharper disable once UnusedTypeParameter
-    public interface IResult<in T,
-    // ReSharper disable once UnusedTypeParameter
-        in TE> { }
-
     public readonly struct Result<T, TE>
     {
         public readonly bool IsOk;
@@ -70,17 +65,31 @@ namespace SimpleDC
             throw new InvalidCastException();
         }
 
-        public static explicit operator Result<T, TE>(Ok<T> ok) => new(true, ok.Value, default);
-        public static explicit operator Result<T, TE>(Err<TE> err) => new(false, default, err.Error);
+        public static explicit operator Ok<T>(Result<T, TE> result)
+        {
+            if (result.IsOk)
+                return new(result._value);
+            throw new InvalidCastException();
+        }
+
+        public static explicit operator Err<TE>(Result<T, TE> result)
+        {
+            if (!result.IsOk)
+                return new(result._error);
+            throw new InvalidCastException();
+        }
+
+        public static implicit operator Result<T, TE>(Ok<T> ok) => new(true, ok.Value, default);
+        public static implicit operator Result<T, TE>(Err<TE> err) => new(false, default, err.Error);
     }
 
-    public readonly struct Ok<T> : IResult<T, object>
+    public readonly struct Ok<T>
     {
         public T Value { get; }
         public Ok(T value) => Value = value;
     }
 
-    public readonly struct Err<T> : IResult<object, T>
+    public readonly struct Err<T>
     {
         public T Error { get; }
         public Err(T err) => Error = err;
@@ -101,7 +110,7 @@ namespace SimpleDC
                     var dcResult = CheckStackSize();
                     if (!dcResult.IsOk) return dcResult;
                     _stack.Push(_stack.Pop() + _stack.Pop());
-                    return (Result<string, string>)new Ok<string>(null);
+                    return new Ok<string>(null);
                 }
                 case Token.TokenType.Sub:
                 {
@@ -109,14 +118,14 @@ namespace SimpleDC
                     if (!dcResult.IsOk) return dcResult;
                     var first = _stack.Pop();
                     _stack.Push(_stack.Pop() - first);
-                    return (Result<string, string>)new Ok<string>(null);
+                    return new Ok<string>(null);
                 }
                 case Token.TokenType.Mul:
                 {
                     var dcResult = CheckStackSize();
                     if (!dcResult.IsOk) return dcResult;
                     _stack.Push(_stack.Pop() * _stack.Pop());
-                    return (Result<string, string>)new Ok<string>(null);
+                    return new Ok<string>(null);
                 }
                 case Token.TokenType.Div:
                 {
@@ -124,30 +133,30 @@ namespace SimpleDC
                     if (!dcResult.IsOk) return dcResult;
                     var first = _stack.Pop();
                     _stack.Push(_stack.Pop() / first);
-                    return (Result<string, string>)new Ok<string>(null);
+                    return new Ok<string>(null);
                 }
                 case Token.TokenType.Print:
-                    return (Result<string, string>)(_stack.TryPeek(out var result)
+                    return _stack.TryPeek(out var result)
                         ? new Ok<string>(result.ToString())
-                        : new Ok<string>("EOF"));
+                        : new Ok<string>("EOF");
                 case Token.TokenType.Quit:
-                    return (Result<string, string>)new Ok<string>("q");
+                    return new Ok<string>("q");
                 case Token.TokenType.Value:
                     if (int.TryParse(token.Value, out var result2))
                     {
                         _stack.Push(result2);
-                        return (Result<string, string>)new Ok<string>(null);
+                        return new Ok<string>(null);
                     }
                     else
-                        return (Result<string, string>) new Err<string>("Invalid token");
+                        return new Err<string>("Invalid token");
                 default:
-                    return (Result<string, string>)new Err<string>("Invalid token");
+                    return new Err<string>("Invalid token");
             }
         }
 
         private Result<string, string> CheckStackSize() => _stack.Count < 2
-            ? (Result<string, string>)new Err<string>("stack.Count < 2")
-            : (Result<string, string>)new Ok<string>(null);
+            ? new Err<string>("stack.Count < 2")
+            : new Ok<string>(null);
     }
 
     internal readonly struct Token
