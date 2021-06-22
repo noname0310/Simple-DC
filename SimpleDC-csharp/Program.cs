@@ -15,25 +15,23 @@ for (;;)
     {
         var input = Token.LexSingle(item);
         var result = dcCalculator.Step(in input);
-        switch (result)
+        if (result.IsOk)
         {
-            case Ok<string> ok:
-                if (ok.Value != null)
-                {
-                    Console.WriteLine(ok.Value);
-                    if (ok.Value == "q")
-                    {
-                        Environment.Exit(0);
-                    }
-                }
-
-                break;
-            case Err<string> err:
-                Console.WriteLine(err.Error == string.Empty
-                    ? "Err"
-                    : $"Err: {err.Error}"
-                );
-                break;
+            var ok = result.AsOk();
+            if (ok.Value != null)
+            {
+                Console.WriteLine(ok.Value);
+                if (ok.Value == "q")
+                    Environment.Exit(0);
+            }
+        }
+        else
+        {
+            var err = result.AsErr();
+            Console.WriteLine(err.Error == string.Empty
+                ? "Err"
+                : $"Err: {err.Error}"
+            );
         }
     }
 }
@@ -44,6 +42,37 @@ namespace SimpleDC
     public interface IResult<in T,
     // ReSharper disable once UnusedTypeParameter
         in TE> { }
+
+    public readonly struct Result<T, TE>
+    {
+        public readonly bool IsOk;
+        private readonly T _value;
+        private readonly TE _error;
+
+        private Result(bool isOk, T value, TE error)
+        {
+            IsOk = isOk;
+            _value = value;
+            _error = error;
+        }
+
+        public Ok<T> AsOk()
+        {
+            if (IsOk)
+                return new(_value);
+            throw new InvalidCastException();
+        }
+
+        public Err<TE> AsErr()
+        {
+            if (!IsOk)
+                return new(_error);
+            throw new InvalidCastException();
+        }
+
+        public static explicit operator Result<T, TE>(Ok<T> ok) => new(true, ok.Value, default);
+        public static explicit operator Result<T, TE>(Err<TE> err) => new(false, default, err.Error);
+    }
 
     public readonly struct Ok<T> : IResult<T, object>
     {
@@ -63,60 +92,62 @@ namespace SimpleDC
 
         public DcCalculator() => _stack = new ();
 
-        public IResult<string, string> Step(in Token token)
+        public Result<string, string> Step(in Token token)
         {
             switch (token.Type)
             {
                 case Token.TokenType.Add:
                 {
                     var dcResult = CheckStackSize();
-                    if (dcResult is Err<string>) return dcResult;
+                    if (!dcResult.IsOk) return dcResult;
                     _stack.Push(_stack.Pop() + _stack.Pop());
-                    return new Ok<string>(null);
+                    return (Result<string, string>)new Ok<string>(null);
                 }
                 case Token.TokenType.Sub:
                 {
                     var dcResult = CheckStackSize();
-                    if (dcResult is Err<string>) return dcResult;
-                    _stack.Push(_stack.Pop() - _stack.Pop());
-                    return new Ok<string>(null);
+                    if (!dcResult.IsOk) return dcResult;
+                    var first = _stack.Pop();
+                    _stack.Push(_stack.Pop() - first);
+                    return (Result<string, string>)new Ok<string>(null);
                 }
                 case Token.TokenType.Mul:
                 {
                     var dcResult = CheckStackSize();
-                    if (dcResult is Err<string>) return dcResult;
+                    if (!dcResult.IsOk) return dcResult;
                     _stack.Push(_stack.Pop() * _stack.Pop());
-                    return new Ok<string>(null);
+                    return (Result<string, string>)new Ok<string>(null);
                 }
                 case Token.TokenType.Div:
                 {
                     var dcResult = CheckStackSize();
-                    if (dcResult is Err<string>) return dcResult;
-                    _stack.Push(_stack.Pop() / _stack.Pop());
-                    return new Ok<string>(null);
+                    if (!dcResult.IsOk) return dcResult;
+                    var first = _stack.Pop();
+                    _stack.Push(_stack.Pop() / first);
+                    return (Result<string, string>)new Ok<string>(null);
                 }
                 case Token.TokenType.Print:
-                    return _stack.TryPeek(out var result)
+                    return (Result<string, string>)(_stack.TryPeek(out var result)
                         ? new Ok<string>(result.ToString())
-                        : new Ok<string>("EOF");
+                        : new Ok<string>("EOF"));
                 case Token.TokenType.Quit:
-                    return new Ok<string>("q");
+                    return (Result<string, string>)new Ok<string>("q");
                 case Token.TokenType.Value:
                     if (int.TryParse(token.Value, out var result2))
                     {
                         _stack.Push(result2);
-                        return new Ok<string>(null);
+                        return (Result<string, string>)new Ok<string>(null);
                     }
                     else
-                        return new Err<string>("Invalid token");
+                        return (Result<string, string>) new Err<string>("Invalid token");
                 default:
-                    return new Err<string>("Invalid token");
+                    return (Result<string, string>)new Err<string>("Invalid token");
             }
         }
 
-        private IResult<string, string> CheckStackSize() => _stack.Count < 2
-            ? new Err<string>("stack.Count < 2")
-            : new Ok<string>(null);
+        private Result<string, string> CheckStackSize() => _stack.Count < 2
+            ? (Result<string, string>)new Err<string>("stack.Count < 2")
+            : (Result<string, string>)new Ok<string>(null);
     }
 
     internal readonly struct Token
