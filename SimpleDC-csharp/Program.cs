@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Xml.XPath;
+using Microsoft.VisualBasic.CompilerServices;
 using SimpleDC;
 
 // ReSharper disable ArrangeObjectCreationWhenTypeNotEvident
@@ -17,20 +20,18 @@ for (;;)
         var result = dcCalculator.Step(in input);
         if (result.IsOk)
         {
-            var ok = result.AsOk();
-            if (ok.Value != null)
+            if (result.Value != null)
             {
-                Console.WriteLine(ok.Value);
-                if (ok.Value == "q")
+                Console.WriteLine(result.Value);
+                if (result.Value == "q")
                     Environment.Exit(0);
             }
         }
         else
         {
-            var err = result.AsErr();
-            Console.WriteLine(err.Error == string.Empty
+            Console.WriteLine(result.Error == string.Empty
                 ? "Err"
-                : $"Err: {err.Error}"
+                : $"Err: {result.Error}"
             );
         }
     }
@@ -38,9 +39,48 @@ for (;;)
 
 namespace SimpleDC
 {
+    public readonly struct Result<T> where T : struct
+    {
+        public readonly bool IsOk;
+        public bool IsErr => !IsOk;
+        private readonly T _value;
+        private readonly Exception _error;
+
+        private Result(bool isOk, T value, Exception exception)
+        {
+            IsOk = isOk;
+            _value = value;
+            _error = exception;
+        }
+
+        public T? Value
+        {
+            get
+            {
+                if (IsOk)
+                    return _value;
+                return null;
+            }
+        }
+
+        public Exception Error
+        {
+            get
+            {
+                if (!IsOk)
+                    return _error;
+                throw new InvalidOperationException();
+            }
+        }
+
+        public static Result<T> Ok(T ok) => new(true, ok, null);
+        public static Result<T> Err(Exception error) => new(false, default, error);
+    }
+
     public readonly struct Result<T, TE>
     {
         public readonly bool IsOk;
+        public bool IsErr => !IsOk;
         private readonly T _value;
         private readonly TE _error;
 
@@ -51,48 +91,28 @@ namespace SimpleDC
             _error = error;
         }
 
-        public Ok<T> AsOk()
+        public T Value
         {
-            if (IsOk)
-                return new(_value);
-            throw new InvalidCastException();
+            get
+            {
+                if (IsOk)
+                    return _value;
+                throw new InvalidOperationException();
+            }
         }
 
-        public Err<TE> AsErr()
+        public TE Error
         {
-            if (!IsOk)
-                return new(_error);
-            throw new InvalidCastException();
+            get
+            {
+                if (!IsOk)
+                    return _error;
+                throw new InvalidOperationException();
+            }
         }
 
-        public static explicit operator Ok<T>(Result<T, TE> result)
-        {
-            if (result.IsOk)
-                return new(result._value);
-            throw new InvalidCastException();
-        }
-
-        public static explicit operator Err<TE>(Result<T, TE> result)
-        {
-            if (!result.IsOk)
-                return new(result._error);
-            throw new InvalidCastException();
-        }
-
-        public static implicit operator Result<T, TE>(Ok<T> ok) => new(true, ok.Value, default);
-        public static implicit operator Result<T, TE>(Err<TE> err) => new(false, default, err.Error);
-    }
-
-    public readonly struct Ok<T>
-    {
-        public T Value { get; }
-        public Ok(T value) => Value = value;
-    }
-
-    public readonly struct Err<T>
-    {
-        public T Error { get; }
-        public Err(T err) => Error = err;
+        public static Result<T, TE> Ok(T ok) => new(true, ok, default);
+        public static Result<T, TE> Err(TE err) => new(false, default, err);
     }
 
     internal class DcCalculator
@@ -110,7 +130,7 @@ namespace SimpleDC
                     var dcResult = CheckStackSize();
                     if (!dcResult.IsOk) return dcResult;
                     _stack.Push(_stack.Pop() + _stack.Pop());
-                    return new Ok<string>(null);
+                    return Result<string, string>.Ok(null);
                 }
                 case Token.TokenType.Sub:
                 {
@@ -118,14 +138,14 @@ namespace SimpleDC
                     if (!dcResult.IsOk) return dcResult;
                     var first = _stack.Pop();
                     _stack.Push(_stack.Pop() - first);
-                    return new Ok<string>(null);
+                    return Result<string, string>.Ok(null);
                 }
                 case Token.TokenType.Mul:
                 {
                     var dcResult = CheckStackSize();
                     if (!dcResult.IsOk) return dcResult;
                     _stack.Push(_stack.Pop() * _stack.Pop());
-                    return new Ok<string>(null);
+                    return Result<string, string>.Ok(null);
                 }
                 case Token.TokenType.Div:
                 {
@@ -133,30 +153,30 @@ namespace SimpleDC
                     if (!dcResult.IsOk) return dcResult;
                     var first = _stack.Pop();
                     _stack.Push(_stack.Pop() / first);
-                    return new Ok<string>(null);
+                    return Result<string, string>.Ok(null);
                 }
                 case Token.TokenType.Print:
                     return _stack.TryPeek(out var result)
-                        ? new Ok<string>(result.ToString())
-                        : new Ok<string>("EOF");
+                        ? Result<string, string>.Ok(result.ToString())
+                        : Result<string, string>.Ok("EOF");
                 case Token.TokenType.Quit:
-                    return new Ok<string>("q");
+                    return Result<string, string>.Ok("q");
                 case Token.TokenType.Value:
                     if (int.TryParse(token.Value, out var result2))
                     {
                         _stack.Push(result2);
-                        return new Ok<string>(null);
+                        return Result<string, string>.Ok(null);
                     }
                     else
-                        return new Err<string>("Invalid token");
+                        return Result<string, string>.Err("Invalid token");
                 default:
-                    return new Err<string>("Invalid token");
+                    return Result<string, string>.Err("Invalid token");
             }
         }
 
         private Result<string, string> CheckStackSize() => _stack.Count < 2
-            ? new Err<string>("stack.Count < 2")
-            : new Ok<string>(null);
+            ? Result<string, string>.Err("stack.Count < 2")
+            : Result<string, string>.Err(null);
     }
 
     internal readonly struct Token
